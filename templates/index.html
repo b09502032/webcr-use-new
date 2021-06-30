@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>教室課表</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.3/css/bulma.min.css">
+    <style>
+        .vertical-align-middle>* {
+            vertical-align: middle;
+        }
+    </style>
+    <script>
+        const side = [
+            '7:10<br>0',
+            '8:10<br>1',
+            '9:10<br>2',
+            '10:20<br>3',
+            '11:20<br>4',
+            '12:20<br>5',
+            '13:20<br>6',
+            '14:20<br>7',
+            '15:30<br>8',
+            '16:30<br>9',
+            '17:30<br>10',
+            '18:25<br>A',
+            '19:20<br>B',
+            '20:15<br>C',
+            '21:10<br>D',
+        ];
+        const symbol = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 'X', 'A', 'B', 'C', 'D'];
+
+        function response(url, query, callback) {
+            url = new URL(url, window.location.href);
+            for (let name in query) {
+                url.searchParams.set(name, query[name]);
+            }
+            let request = new Request(url);
+            fetch(request).then(function (response) {
+                return response.json();
+            }).then(callback);
+        }
+        function Info_equals(a, b) {
+            for (let key in a) {
+                if (!(key in b) || a[key] !== b[key]) return false;
+            }
+            for (let key in b) {
+                if (!(key in a) || b[key] !== a[key]) return false;
+            }
+            return true;
+        }
+        function timeDT_add(a, b) {
+            for (let i = 0; i < b.length; i++) {
+                let bobject = b[i];
+                let bItem = bobject['Item'];
+                let j = 0;
+                for (; j < a.length; j++) {
+                    let aobject = a[j];
+                    let aItem = aobject['Item'];
+                    if (aItem === bItem) {
+                        for (let key in bobject) {
+                            if (key === 'Item') {
+                                continue;
+                            }
+                            if (key in aobject) {
+                                let aarray = aobject[key];
+                                let barray = bobject[key];
+                                for (let bvalue of barray) {
+                                    if (key.startsWith('Info')) {
+                                        let avalues = [];
+                                        for (let avalue of aarray) {
+                                            avalues.push(avalue);
+                                        }
+                                        if (!avalues.reduce((previousValue, currentValue) => previousValue || Info_equals(bvalue, currentValue), false)) {
+                                            aarray.push(bvalue);
+                                        }
+                                    } else if (key.startsWith('T')) {
+                                        if (!aarray.includes(bvalue)) {
+                                            aarray.push(bvalue);
+                                        }
+                                    }
+                                }
+                            } else {
+                                let barray = bobject[key];
+                                aobject[key] = barray;
+                            }
+                        }
+                        break;
+                    }
+                }
+                if (j === a.length) {
+                    a.push(bobject);
+                }
+            }
+        }
+        function timeDT_to_table(timeDT) {
+            let table = document.createElement('table');
+            table.classList.add('table', 'is-striped');
+            let thead = document.createElement('thead');
+            let tr = document.createElement('tr');
+            let th = document.createElement('th');
+            tr.appendChild(th);
+            for (let object of timeDT) {
+                let Item = object['Item'];
+                let th = document.createElement('th');
+                th.textContent = Item;
+                tr.appendChild(th);
+            }
+            thead.appendChild(tr);
+            table.appendChild(thead);
+            let tbody = document.createElement('tbody');
+            let trs = [];
+            for (let i = 0; i < side.length; i++) {
+                let tr = document.createElement('tr');
+                let td = document.createElement('td');
+                td.innerHTML = side[i];
+                tr.appendChild(td);
+                tbody.appendChild(tr);
+                trs.push(tr);
+            }
+            for (let object of timeDT) {
+                for (let i = 0; i < symbol.length; i++) {
+                    let tr = trs[i];
+                    let td = document.createElement('td');
+                    let Tkey = `T${symbol[i]}`;
+                    let Infokey = `Info${symbol[i]}`;
+                    if (Tkey in object) {
+                        let array = object[Tkey];
+                        for (let j = 0; j < array.length; j++) {
+                            let value = array[j];
+                            let dropdown = document.createElement('div');
+                            dropdown.classList.add('box', 'dropdown', 'is-hoverable');
+                            dropdown.style.padding = '0.5rem';
+                            dropdown.style.cursor = 'pointer';
+                            dropdown.style.display = 'block';
+                            if (j != array.length - 1) {
+                                dropdown.style.marginBottom = '0.5rem';
+                            }
+                            let dropdown_trigger = document.createElement('dropdown-trigger');
+                            let div = document.createElement('div');
+                            div.innerHTML = value.replace(/<br \\\/>/g, ' ');
+                            dropdown_trigger.appendChild(div);
+                            dropdown.appendChild(dropdown_trigger);
+                            let dropdown_menu = document.createElement('div');
+                            dropdown_menu.classList.add('dropdown-menu');
+                            let dropdown_content = document.createElement('div');
+                            dropdown_content.classList.add('dropdown-content');
+                            let dropdown_item = document.createElement('dropdown-item');
+                            dropdown_item.classList.add('dropdown-item');
+                            let info = document.createElement('table');
+                            info.classList.add('table', 'is-narrow', 'has-background-grey-lighter');
+                            info.style.width = 'max-content';
+                            let info_tbody = document.createElement('tbody');
+                            let info_tr = document.createElement('tr');
+                            let info_td = document.createElement('td');
+                            info_td.textContent = '課程識別碼';
+                            info_tr.appendChild(info_td);
+                            info_td = document.createElement('td');
+                            info_td.textContent = object[Infokey][j]['cr_cono'];
+                            info_tr.appendChild(info_td);
+                            info_td = document.createElement('td');
+                            info_td.textContent = '班次';
+                            info_tr.appendChild(info_td);
+                            info_td = document.createElement('td');
+                            info_td.textContent = object[Infokey][j]['cr_clas'];
+                            info_tr.appendChild(info_td);
+                            info_tbody.appendChild(info_tr);
+                            info_tr = document.createElement('tr');
+                            info_td = document.createElement('td');
+                            info_td.textContent = '課程名稱';
+                            info_tr.appendChild(info_td);
+                            info_td = document.createElement('td');
+                            info_td.colSpan = 3;
+                            info_td.textContent = object[Infokey][j]['cr_cnam'];
+                            info_tr.appendChild(info_td);
+                            info_tbody.appendChild(info_tr);
+                            info.appendChild(info_tbody);
+                            info_tr = document.createElement('tr');
+                            info_td = document.createElement('td');
+                            info_td.textContent = '教師';
+                            info_tr.appendChild(info_td);
+                            info_td = document.createElement('td');
+                            info_td.colSpan = 3;
+                            info_td.textContent = object[Infokey][j]['cr_tenam'];
+                            info_tr.appendChild(info_td);
+                            info_tbody.appendChild(info_tr);
+                            info.appendChild(info_tbody);
+                            info_tr = document.createElement('tr');
+                            info_td = document.createElement('td');
+                            info_td.textContent = '教室';
+                            info_tr.appendChild(info_td);
+                            info_td = document.createElement('td');
+                            info_td.colSpan = 3;
+                            info_td.textContent = object[Infokey][j]['cr_no'];
+                            info_tr.appendChild(info_td);
+                            info_tbody.appendChild(info_tr);
+                            info.appendChild(info_tbody);
+                            info_tr = document.createElement('tr');
+                            info_td = document.createElement('td');
+                            info_td.textContent = '時間';
+                            info_tr.appendChild(info_td);
+                            info_td = document.createElement('td');
+                            info_td.colSpan = 3;
+                            info_td.textContent = object[Infokey][j]['cr_time'];
+                            info_tr.appendChild(info_td);
+                            info_tbody.appendChild(info_tr);
+                            info.appendChild(info_tbody);
+                            dropdown_item.appendChild(info);
+                            dropdown_content.appendChild(dropdown_item);
+                            dropdown_menu.appendChild(dropdown_content);
+                            dropdown.appendChild(dropdown_menu);
+                            dropdown.addEventListener('click', function () {
+                                let text_content = div.textContent;
+                                let mark = !dropdown.classList.contains('has-background-info-dark');
+                                for (let dd of document.querySelectorAll('#ClassTimeGV > table > tbody > tr > td > div')) {
+                                    if (dd.querySelector('dropdown-trigger > div').textContent === text_content) {
+                                        if (mark) {
+                                            dd.classList.add('has-background-info-dark', 'has-text-white');
+                                        } else {
+                                            dd.classList.remove('has-background-info-dark', 'has-text-white');
+                                        }
+                                    }
+                                }
+                            });
+                            td.appendChild(dropdown);
+                        }
+                    }
+                    tr.appendChild(td);
+                }
+            }
+            table.appendChild(tbody);
+            return table;
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            let SYearDDL = document.getElementById('SYearDDL');
+            let BuildingDDL = document.getElementById('BuildingDDL');
+            let RoomDDL = document.getElementById('RoomDDL');
+            let SelectButton = document.getElementById('SelectButton');
+            let timeDT = [];
+            let ClassTimeGV = document.getElementById('ClassTimeGV');
+
+            BuildingDDL.addEventListener('change', function (event) {
+                let query = { 'building': event.target.value };
+                response('/get-classroom-by-building', query, function (value) {
+                    let status = value['status'];
+                    if (status === 'OK') {
+                        let room_ls = value['room_ls'];
+                        RoomDDL.innerHTML = '';
+                        for (let i = 0; i < room_ls.length; i++) {
+                            let cr_no = room_ls[i]['cr_no'];
+                            let option = document.createElement('option');
+                            option.value = cr_no;
+                            option.textContent = cr_no;
+                            RoomDDL.appendChild(option);
+                        }
+                    } else {
+                        console.log(value);
+                    }
+                });
+            });
+            SelectButton.addEventListener('click', function () {
+                let query = {
+                    'SYearDDL': SYearDDL.options[SYearDDL.selectedIndex].value,
+                    'BuildingDDL': BuildingDDL.options[BuildingDDL.selectedIndex].value,
+                    'RoomDDL': RoomDDL.options[RoomDDL.selectedIndex].value,
+                }
+                response('/webcr-use-new', query, function (value) {
+                    timeDT_add(timeDT, value);
+                    let table = timeDT_to_table(timeDT);
+                    ClassTimeGV.innerHTML = '';
+                    ClassTimeGV.appendChild(table);
+                });
+            });
+        });
+    </script>
+</head>
+
+<body>
+    <section class="section">
+        <div class="container is-fluid">
+            <h1 class="title">教室課表</h1>
+            <p class="subtitle">
+                source: <a href="https://gra206.aca.ntu.edu.tw/classrm/index.php/acarm/webcr-use-new">教室課表 - 臺大教務處</a>
+            </p>
+            <div>
+                <span class="vertical-align-middle">
+                    <span>學期：</span>
+                    <div class="select">
+                        <select id="SYearDDL">
+                            {% for value, text_content in SYearDDL %}
+                            <option value="{{ value }}">{{ text_content }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </span>
+                <span class="vertical-align-middle">
+                    <span>建物/學院：</span>
+                    <div class="select">
+                        <select id="BuildingDDL">
+                            {% for value, text_content in BuildingDDL %}
+                            <option value="{{ value }}">{{ text_content }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </span>
+                <span class="vertical-align-middle">
+                    <span>教室：</span>
+                    <div class="select">
+                        <select id="RoomDDL"></select>
+                    </div>
+                </span>
+                <span>
+                    <button class="button" id="SelectButton">新增</button>
+                </span>
+            </div>
+            <div id="ClassTimeGV"></div>
+            <div id="modal"></div>
+        </div>
+    </section>
+</body>
+
+</html>
